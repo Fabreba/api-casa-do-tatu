@@ -39,7 +39,7 @@ def get_password_hash (password):
     return pwd_context.hash(password)
 def get_user(username: str, db = collection):
     query = collection.find_one({"username": username})
-    print(username,query)
+    print(username, query)
     if query:
         user_data = query
         return UserInDB(**user_data)
