@@ -119,3 +119,8 @@ async def register(user: UserInDB):
         return response
     else:
         return {"message":"Username already exists"}
+
+
+@app.get("/")
+async def index():
+    return {"message":"success"}
