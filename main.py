@@ -4,12 +4,12 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from nosql.database import collection
 from fastapi.middleware.cors import CORSMiddleware
+from decouple import config as decouple_config
+from nosql.database import collection
 
-
-SECRET_KEY = "83daa0256a2289b0fb23693bf1f6034d44396675749244721a2b20e896e11662"
-ALGORITHM = "HS256"
+SECRET_KEY = decouple_config('SECRET_KEY')
+ALGORITHM = decouple_config('ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 db = collection
@@ -29,6 +29,10 @@ class User(BaseModel):
 class UserInDB(User):
     hashed_password: str
 
+class UserFields(BaseModel):
+    username: str
+    email: str
+    password: str
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -54,7 +58,8 @@ def get_user(username: str, db = collection):
     print(username, query)
     if query:
         user_data = query
-        return UserInDB(**user_data)
+        print(UserFields(**user_data))
+        return UserFields(**user_data)
     return None
 
 def authenticate_user(db, username: str, password: str):
@@ -72,7 +77,7 @@ def create_access_token(data: dict, expires_delta: timedelta or None = None):
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode (to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -96,9 +101,9 @@ async def get_current_active_user(current_user: UserInDB = Depends(get_current_u
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def register_user(user: UserInDB, db=db):
+def register_user(user: UserFields, db=db):
     user_dict = dict(user)
-    user_dict['hashed_password'] = get_password_hash(user_dict['hashed_password'])
+    user_dict['password'] = get_password_hash(user_dict['password'])
     db.insert_one(user_dict)
     return {"message":"register sucessful"}
 
@@ -122,7 +127,7 @@ async def read_own_items(current_user: User = Depends(get_current_active_user)):
     return [{"item_id": 1, "owner": current_user}]
 
 @app.post("/register")
-async def register(user: UserInDB):
+async def register(user: UserFields):
     inDB = get_user(user.username, db)
     print(inDB)
     if inDB is None:
