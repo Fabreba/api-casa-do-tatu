@@ -39,7 +39,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app = FastAPI()
 
-origins = ["*"]
+origins = ["*","https://api-casa-do-tatu.onrender.com"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
