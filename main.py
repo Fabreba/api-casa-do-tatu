@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from decouple import config as decouple_config
 from nosql.database import collection
 
@@ -39,7 +40,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app = FastAPI()
 
 origins = ["*"]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -53,7 +53,7 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash (password):
     return pwd_context.hash(password)
-def get_user(username: str, db = collection):
+async def get_user(username: str, db = collection):
     query = collection.find_one({"username": username})
     print(username, query)
     if query:
@@ -101,7 +101,7 @@ async def get_current_active_user(current_user: UserInDB = Depends(get_current_u
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def register_user(user: UserFields, db=db):
+async def register_user(user: UserFields, db=db):
     user_dict = dict(user)
     user_dict['password'] = get_password_hash(user_dict['password'])
     db.insert_one(user_dict)
@@ -128,11 +128,11 @@ async def read_own_items(current_user: User = Depends(get_current_active_user)):
 
 @app.post("/register")
 async def register(user: UserFields):
-    inDB = get_user(user.username, db)
+    inDB = await get_user(user.username, db)
     print(inDB)
     if inDB is None:
         print(inDB)
-        response = register_user(user)
+        response = await register_user(user)
         return response
     else:
         return {"message":"Username already exists"}
