@@ -53,7 +53,7 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash (password):
     return pwd_context.hash(password)
-async def get_user(username: str, db = collection):
+def get_user(username: str, db = collection):
     query = collection.find_one({"username": username})
     print("QUERY")
     print(username, query)
@@ -103,7 +103,7 @@ async def get_current_active_user(current_user: UserInDB = Depends(get_current_u
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-async def register_user(user: UserFields, db=db):
+def register_user(user: UserFields, db=db):
     print("Register User")
     user_dict = dict(user)
     user_dict['password'] = get_password_hash(user_dict['password'])
@@ -131,18 +131,16 @@ async def read_own_items(current_user: User = Depends(get_current_active_user)):
     return [{"item_id": 1, "owner": current_user}]
 
 @app.post("/register")
-async def register(user: UserFields):
-    print("CHAMOU REGISTER")
-    inDB = await get_user(user.username, db)
+def register(user: UserFields):
+    print(user)
+    inDB = get_user(user.username, db)
 
     print(inDB)
     if inDB is None:
-        print("NOT INDB")
         print(inDB)
-        response = await register_user(user)
+        response = register_user(user)
         return response
     else:
-        print("INDB")
         return {"message":"Username already exists"}
 
 
