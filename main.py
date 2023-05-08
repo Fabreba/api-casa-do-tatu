@@ -35,6 +35,7 @@ class UserFields(BaseModel):
     email: str
     password: str
 
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app = FastAPI()
@@ -53,23 +54,26 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash (password):
     return pwd_context.hash(password)
-def get_user(username: str, db = collection):
-    query = collection.find_one({"username": username})
-    print("QUERY")
-    print(username, query)
-    if query:
-        print("QUERY SUCCESS")
-        user_data = query
-        print(UserFields(**user_data))
-        return UserFields(**user_data)
-    return None
+def get_user(username: str, email: str, db = collection):
+    queryName = collection.find_one({"username": username})
+    queryEmail = collection.find_one({"email": email})
+    print("query1", queryName)
+    print("query2", queryEmail)
+    if queryName is None:
+        if queryEmail is None:
+            return None
+    print("QUERY SUCCESS")
+    user_data = queryName or queryEmail
+    print(UserFields(**user_data))
+    return UserFields(**user_data)
 
-def authenticate_user(db, username: str, password: str):
-    user = get_user(username, db)
+def authenticate_user(username: str,email: str, password: str):
+    user = get_user(username,email, db)
+    print("usuario",user)
     if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
+        return None
+    if not verify_password(password, user.password):
+        return None
     return user
 
 def create_access_token(data: dict, expires_delta: timedelta or None = None):
@@ -133,15 +137,25 @@ async def read_own_items(current_user: User = Depends(get_current_active_user)):
 @app.post("/register")
 def register(user: UserFields):
     print(user)
-    inDB = get_user(user.username, db)
-
-    print(inDB)
+    inDB = get_user(user.username,user.email, db)
+    print("indb", inDB)
     if inDB is None:
         print(inDB)
         response = register_user(user)
         return response
     else:
-        return {"message":"Username already exists"}
+        return {"message":"Username or email already exists"}
+
+@app.post("/login")
+def login(user: UserFields):
+    print(user)
+    inDB = authenticate_user(user.username, user.email, user.password)
+    print(inDB)
+    if inDB is None:
+        response = {"message": "cant find this account or wrong credentials"}
+        return response
+    else:
+        return {"message":"logged in"}
 
 
 @app.get("/")
