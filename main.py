@@ -16,34 +16,26 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 db = collection
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: str or None = None
-
-
-class User(BaseModel):
-    username: str
-    email: str or None = None
-    disabled: bool or None = None
-
-
-class UserInDB(User):
-    hashed_password: str
-
-
 class UserFields(BaseModel):
     username: str
     email: str
     password: str
+    points: int = 0
+    logged: bool = False
 
 
 class LoginUserFields(BaseModel):
     username: str
     password: str
+
+
+class PointFields(BaseModel):
+    username: str
+    points: int
+
+
+class GetPoints(BaseModel):
+    username: str
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -68,7 +60,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def get_user(username: str, email: str, db=collection):
+def get_user(username: str, email: str, db=db):
     queryName = collection.find_one({"username": username})
     queryEmail = collection.find_one({"email": email})
     print("query1", queryName)
@@ -102,70 +94,13 @@ def authenticate_user(username: str, password: str):
     return user
 
 
-def create_access_token(data: dict, expires_delta: timedelta or None = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credential_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                         detail="Could not validate credentials",
-                                         headers={"WWW-Authenticate": "Bearer"})
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credential_exception
-        token_data = TokenData(username=username)
-    except JWTError:
-        raise credential_exception
-    user = get_user(db, username=token_data.username)
-    if user is None:
-        raise credential_exception
-    return user
-
-
-async def get_current_active_user(current_user: UserInDB = Depends(get_current_user)):
-    if current_user.disabled:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
-
-
 def register_user(user: UserFields, db=db):
     print("Register User")
     user_dict = dict(user)
     user_dict['password'] = get_password_hash(user_dict['password'])
     db.insert_one(user_dict)
     print("success")
-    return {"message": "register sucessful"}
-
-
-@app.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"})
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires)
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-@app.get("/users/me/", response_model=User)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    return current_user
-
-
-@app.get("/users/me/items")
-async def read_own_items(current_user: User = Depends(get_current_active_user)):
-    return [{"item_id": 1, "owner": current_user}]
+    return {"message": "register successful"}
 
 
 @app.post("/register")
@@ -182,7 +117,7 @@ def register(user: UserFields):
 
 
 @app.post("/login")
-def login(user: LoginUserFields):
+async def login(user: LoginUserFields):
     print(user)
     inDB = authenticate_user(user.username, user.password)
     print(inDB)
@@ -191,6 +126,23 @@ def login(user: LoginUserFields):
         return response
     else:
         return {"message": "logged in"}
+
+
+@app.post("/points")
+async def change_points(fields: PointFields):
+    myquery = {"username": f"{fields.username}"}
+    newvalues = {"$set": {"points": fields.points}}
+    db.update_one(myquery, newvalues)
+
+
+@app.post("/getpoints")
+async def get_points(username: GetPoints):
+    myquery = {"username": f"{username.username}"}
+    user = db.find_one(myquery)
+    if user:
+        print(user["points"])
+        return user["points"]
+    return {"message": "User not found"}
 
 
 @app.get("/")
