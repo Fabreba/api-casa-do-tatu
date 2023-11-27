@@ -1,11 +1,8 @@
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import FastAPI
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
-from datetime import datetime, timedelta
-from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from decouple import config as decouple_config
 from nosql.database import collection
 
@@ -42,7 +39,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app = FastAPI()
 
-origins = ["*", "https://api-casa-do-tatu.onrender.com"]
+origins = ["*", "https://api-casa-do-tatu.onrender.com","apicasadotatu.azurewebsites.net"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -147,4 +144,5 @@ async def get_points(username: GetPoints):
 
 @app.get("/")
 async def index():
+
     return {"message": "success"}
