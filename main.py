@@ -97,6 +97,7 @@ def register_user(user: UserFields, db=db):
 def register(user: UserFields):
     inDB = get_user(user.username, user.email, db)
     if inDB is None:
+        print("pre blob")
         response = register_user(user)
         save_in_blob(user)
         return response
