@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 from decouple import config as decouple_config
+
+from blob.save_blob import save_in_blob
 from nosql.database import collection
 
 SECRET_KEY = decouple_config('SECRET_KEY')
@@ -39,7 +41,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 app = FastAPI()
 
-origins = ["*", "https://api-casa-do-tatu.onrender.com","apicasadotatu.azurewebsites.net"]
+origins = ["*", "https://api-casa-do-tatu.onrender.com","apidacasadotatu.azurewebsites.net"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -60,25 +62,18 @@ def get_password_hash(password):
 def get_user(username: str, email: str, db=db):
     queryName = collection.find_one({"username": username})
     queryEmail = collection.find_one({"email": email})
-    print("query1", queryName)
-    print("query2", queryEmail)
     if queryName is None:
         if queryEmail is None:
             return None
-    print("QUERY SUCCESS")
     user_data = queryName or queryEmail
-    print(UserFields(**user_data))
     return UserFields(**user_data)
 
 
 def find_user(username: str, db=collection):
     queryName = collection.find_one({"username": username})
-    print("query1", queryName)
     if queryName is None:
         return None
-    print("QUERY SUCCESS")
     user_data = queryName
-    print(UserFields(**user_data))
     return UserFields(**user_data)
 
 
@@ -92,22 +87,18 @@ def authenticate_user(username: str, password: str):
 
 
 def register_user(user: UserFields, db=db):
-    print("Register User")
     user_dict = dict(user)
     user_dict['password'] = get_password_hash(user_dict['password'])
     db.insert_one(user_dict)
-    print("success")
     return {"message": "register successful"}
 
 
 @app.post("/register")
 def register(user: UserFields):
-    print(user)
     inDB = get_user(user.username, user.email, db)
-    print("indb", inDB)
     if inDB is None:
-        print(inDB)
         response = register_user(user)
+        save_in_blob(user)
         return response
     else:
         return {"message": "Username or email already exists"}
@@ -115,9 +106,7 @@ def register(user: UserFields):
 
 @app.post("/login")
 async def login(user: LoginUserFields):
-    print(user)
     inDB = authenticate_user(user.username, user.password)
-    print(inDB)
     if inDB is None:
         response = {"message": "cant find this account or wrong credentials"}
         return response
@@ -137,7 +126,6 @@ async def get_points(username: GetPoints):
     myquery = {"username": f"{username.username}"}
     user = db.find_one(myquery)
     if user:
-        print(user["points"])
         return user["points"]
     return {"message": "User not found"}
 
