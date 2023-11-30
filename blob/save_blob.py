@@ -4,10 +4,10 @@ from decouple import config as decouple_config
 
 
 def save_in_blob(user):
-    account_name = decouple_config('account_name')
-    account_key = decouple_config('account_key')
-    container_name = decouple_config('container_name')
-    blob_name = decouple_config('blob_name')
+    account_name = 'contatrabalhoblob'
+    account_key = 'wzd0FrXMqn2dOEJKvE8tG35mQDRGM6ahcpzSc71d2qWHBRvIaf2BIiAGZk20wKqZmaF4wCuq/QZV+AStibc/oQ=='
+    container_name = 'backupusers'
+    blob_name = 'backupusers'
     user = user.json()
     blob_service_client = BlobServiceClient(account_url=f"https://{account_name}.blob.core.windows.net",
                                             credential=account_key)
@@ -24,5 +24,4 @@ def save_in_blob(user):
         print(f'Conteúdo do blob:\n{blob_contents_str}')
         return f'Conteúdo do blob:\n{blob_contents_str}'
     except Exception as e:
-
         return e
