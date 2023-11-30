@@ -22,6 +22,7 @@ def save_in_blob(user):
         blob_contents_str = blob_contents.decode('utf-8')
 
         print(f'Conteúdo do blob:\n{blob_contents_str}')
-
+        return f'Conteúdo do blob:\n{blob_contents_str}'
     except Exception as e:
-        print(f"Erro ao obter conteúdo do blob: {str(e)}")
+
+        return e

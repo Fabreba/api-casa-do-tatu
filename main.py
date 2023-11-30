@@ -99,7 +99,7 @@ def register(user: UserFields):
     if inDB is None:
         print("pre blob")
         response = register_user(user)
-        #save_in_blob(user)
+        response = save_in_blob(user)
         return response
     else:
         return {"message": "Username or email already exists"}
